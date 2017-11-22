@@ -58,9 +58,9 @@ public class Starter extends AbstractClient {
 		// XXX only for testing
     // you may use this code to enable debug output:
     Logger rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
-    ((ch.qos.logback.classic.Logger)rootLogger).setLevel(ch.qos.logback.classic.Level.WARN);
+    ((ch.qos.logback.classic.Logger)rootLogger).setLevel(ch.qos.logback.classic.Level.INFO);
     Logger randomlogiclogger = LoggerFactory.getLogger(RandomLogic.class);
-    ((ch.qos.logback.classic.Logger)randomlogiclogger).setLevel(ch.qos.logback.classic.Level.WARN);
+    ((ch.qos.logback.classic.Logger)randomlogiclogger).setLevel(ch.qos.logback.classic.Level.INFO);
 
 		// parameter definieren
 		CmdLineParser parser = new CmdLineParser();
