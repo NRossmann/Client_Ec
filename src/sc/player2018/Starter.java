@@ -1,5 +1,6 @@
 package sc.player2018;
 
+import ch.qos.logback.classic.Level;
 import jargs.gnu.CmdLineParser;
 import jargs.gnu.CmdLineParser.IllegalOptionValueException;
 import jargs.gnu.CmdLineParser.UnknownOptionException;
@@ -58,9 +59,9 @@ public class Starter extends AbstractClient {
 		// XXX only for testing
     // you may use this code to enable debug output:
     Logger rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
-    ((ch.qos.logback.classic.Logger)rootLogger).setLevel(ch.qos.logback.classic.Level.INFO);
+    ((ch.qos.logback.classic.Logger)rootLogger).setLevel(Level.ALL);
     Logger randomlogiclogger = LoggerFactory.getLogger(RandomLogic.class);
-    ((ch.qos.logback.classic.Logger)randomlogiclogger).setLevel(ch.qos.logback.classic.Level.INFO);
+    ((ch.qos.logback.classic.Logger)randomlogiclogger).setLevel(Level.ALL);
 
 		// parameter definieren
 		CmdLineParser parser = new CmdLineParser();

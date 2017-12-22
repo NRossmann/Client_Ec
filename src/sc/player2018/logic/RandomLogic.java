@@ -5,6 +5,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Random;
 
+import com.sun.xml.internal.bind.v2.util.EditDistance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,25 +71,22 @@ public class RandomLogic implements IGameHandler {
     //int Field = currentPlayer.getFieldIndex();
     //String FieldS = String.valueOf(Field);
     //log.warn(FieldS);
-
+    log.debug("test");
 
     //Test ob zu viele Karrotten vorhanden sind
     boolean tomuchCarrots;
     int feld = currentPlayer.getFieldIndex();
     int disgoal = 63-feld;
-    int carrotstogoal = disgoal*(disgoal+1)/2;
+    int carrotstogoal = GameRuleLogic.calculateCarrots(disgoal);
     int carrots = currentPlayer.getCarrots();
-    if (carrotstogoal>=carrots){
+    if (carrots>=carrotstogoal){
         tomuchCarrots = true;
     }else {
         tomuchCarrots = false;
     }
+
     String tomuchCarrot = String.valueOf(tomuchCarrots);
-    log.info(tomuchCarrot);
-
-        int x = 2;
-        currentPlayer.changeCarrotsBy(x);
-
+    log.warn(tomuchCarrot);
 
     ArrayList<Move> possibleMove = gameState.getPossibleMoves(); // Enthält mindestens ein Element
     ArrayList<Move> saladMoves = new ArrayList<>();
@@ -97,6 +95,7 @@ public class RandomLogic implements IGameHandler {
     ArrayList<Move> saladcardMoves = new ArrayList<>();
     ArrayList<Move> selectedMoves = new ArrayList<>();
     ArrayList<Move> einserMoves = new ArrayList<>();
+    ArrayList<Move> fallbackSaladMoves = new ArrayList<>();
 
     int index = currentPlayer.getFieldIndex();
     for (Move move : possibleMove)
@@ -130,23 +129,23 @@ public class RandomLogic implements IGameHandler {
                 } // Muss nicht zusätzlich ausgewählt werden, wurde schon durch Advance ausgewählt
             } else if (action instanceof ExchangeCarrots) {
                 ExchangeCarrots exchangeCarrots = (ExchangeCarrots) action;
-                if (exchangeCarrots.getValue() == 10 && currentPlayer.getCarrots() < 30 && index < 40
-                        && !(currentPlayer.getLastNonSkipAction() instanceof ExchangeCarrots)) {
-                    // Nehme nur Karotten auf, wenn weniger als 30 und nur am Anfang und nicht zwei mal hintereinander
+                if (exchangeCarrots.getValue() == 10 && currentPlayer.getCarrots() < 50 && index < 40 && !(currentPlayer.getLastNonSkipAction() instanceof ExchangeCarrots)) {
+                    // Nehme nur Karotten auf, wenn weniger als 50 und nur am Anfang und nicht zwei mal hintereinander
                     selectedMoves.add(move);
-                } else if (exchangeCarrots.getValue() == -10 && currentPlayer.getCarrots() > 30 && index >= 40) {
+                } else if (exchangeCarrots.getValue() == -10) {
                     // abgeben von Karotten ist nur am Ende sinnvoll
-                    selectedMoves.add(move);
+                    carrotMoves.add(move);
                 }
             } else if (action instanceof FallBack) {
                 if (index > 56 /*letztes Salatfeld*/ && currentPlayer.getSalads() > 0) {
                     // Falle nur am Ende (index > 56) zurück, außer du musst noch einen Salat loswerden
-                    selectedMoves.add(move);
+                    log.debug("fallback zug möglich");
+                    fallbackSaladMoves.add(move);
                 } else if (index <= 56 && index - gameState.getPreviousFieldByType(FieldType.HEDGEHOG, index) < 5) {
                     // Falle zurück, falls sich Rückzug lohnt (nicht zu viele Karotten aufnehmen)
                     selectedMoves.add(move);
                 }
-            } else {
+            }else {
                 // Füge Salatessen oder Skip hinzu
                 selectedMoves.add(move);
             }
@@ -154,6 +153,7 @@ public class RandomLogic implements IGameHandler {
 
 
     Move move;
+    int Field = currentPlayer.getFieldIndex();
     if (!winningMoves.isEmpty()) {
       log.info("Sende Gewinnzug");
       move = winningMoves.get(rand.nextInt(winningMoves.size()));
@@ -166,12 +166,15 @@ public class RandomLogic implements IGameHandler {
         //Salat durch Karte abgeben
         log.info("Sende Zug auf Hasenfeld mit Salatkarte");
         move = saladcardMoves.get(rand.nextInt(saladcardMoves.size()));
+    }else if (index > 56 && !fallbackSaladMoves.isEmpty()) {
+        log.info("Sende Zug zurück hinter Salatfeld");
+        move = fallbackSaladMoves.get(rand.nextInt(fallbackSaladMoves.size()));
     }else if (tomuchCarrots && !carrotMoves.isEmpty()){
         log.info("Sende Zug zum Karrottenfeld");
         move = carrotMoves.get(rand.nextInt(carrotMoves.size()));
     } else if (!selectedMoves.isEmpty()) {
         move = selectedMoves.get(rand.nextInt(selectedMoves.size()));
-    } else {
+    }else {
         move = possibleMove.get(rand.nextInt(possibleMove.size()));
     }
 
