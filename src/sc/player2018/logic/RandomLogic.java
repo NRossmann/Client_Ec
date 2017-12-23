@@ -63,15 +63,7 @@ public class RandomLogic implements IGameHandler {
 	public void onRequestAction(){
     long startTime = System.nanoTime();
     log.info("Es wurde ein Zug angefordert.");
-    //int Salats = currentPlayer.getFieldIndex();
-    //String SalatsS = String.valueOf(Salats);
-    //log.warn(SalatsS);
-    //currentPlayer.setFieldIndex(63);
-    //currentPlayer.changeCarrotsBy(-60);
-    //int Field = currentPlayer.getFieldIndex();
-    //String FieldS = String.valueOf(Field);
-    //log.warn(FieldS);
-    log.debug("test");
+
 
     //Test ob zu viele Karrotten vorhanden sind
     boolean tomuchCarrots;
@@ -86,7 +78,7 @@ public class RandomLogic implements IGameHandler {
     }
 
     String tomuchCarrot = String.valueOf(tomuchCarrots);
-    log.warn(tomuchCarrot);
+    log.info(tomuchCarrot);
 
     ArrayList<Move> possibleMove = gameState.getPossibleMoves(); // Enthält mindestens ein Element
     ArrayList<Move> saladMoves = new ArrayList<>();
@@ -129,11 +121,11 @@ public class RandomLogic implements IGameHandler {
                 } // Muss nicht zusätzlich ausgewählt werden, wurde schon durch Advance ausgewählt
             } else if (action instanceof ExchangeCarrots) {
                 ExchangeCarrots exchangeCarrots = (ExchangeCarrots) action;
-                if (exchangeCarrots.getValue() == 10 && currentPlayer.getCarrots() < 50 && index < 40 && !(currentPlayer.getLastNonSkipAction() instanceof ExchangeCarrots)) {
-                    // Nehme nur Karotten auf, wenn weniger als 50 und nur am Anfang und nicht zwei mal hintereinander
+                if (exchangeCarrots.getValue() == 10 && !tomuchCarrots) {
+                    // Nehme nur Karotten auf wenn nicht zu viele Karotten da sind
                     selectedMoves.add(move);
-                } else if (exchangeCarrots.getValue() == -10) {
-                    // abgeben von Karotten ist nur am Ende sinnvoll
+                } else if (exchangeCarrots.getValue() == -10 && tomuchCarrots) {
+                    // abgeben von Karotten nur wenn zu viele
                     carrotMoves.add(move);
                 }
             } else if (action instanceof FallBack) {
