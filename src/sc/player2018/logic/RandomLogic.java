@@ -64,6 +64,12 @@ public class RandomLogic implements IGameHandler {
     long startTime = System.nanoTime();
     log.info("Es wurde ein Zug angefordert.");
 
+    //Index Gegner
+    PlayerColor Color = currentPlayer.getPlayerColor();
+    log.warn(Color.toString());
+    //int indexG = currentPlayer.getFieldIndex();
+    //String x = Integer.toString(indexG);
+    //log.warn(x);
 
     //Test ob zu viele Karrotten vorhanden sind
     boolean tomuchCarrots;
