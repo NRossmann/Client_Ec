@@ -16,7 +16,9 @@ import sc.plugin2018.util.GameRuleLogic;
 import sc.shared.PlayerColor;
 import sc.shared.InvalidMoveException;
 import sc.shared.GameResult;
+import sc.shared.PlayerScore;
 import sc.plugin2018.Board;
+import sc.plugin2018.GameState;
 
 /**
  * Das Herz des Simpleclients: Eine sehr simple Logik, die ihre Zuege zufaellig
@@ -28,6 +30,7 @@ public class RandomLogic implements IGameHandler {
 	private Starter client;
 	private GameState gameState;
 	private Player currentPlayer;
+
 
   private static final Logger log = LoggerFactory.getLogger(RandomLogic.class);
 	/*
@@ -64,12 +67,9 @@ public class RandomLogic implements IGameHandler {
     long startTime = System.nanoTime();
     log.info("Es wurde ein Zug angefordert.");
 
-    //Index Gegner
+    //Unsere Farbe
     PlayerColor Color = currentPlayer.getPlayerColor();
-    log.warn(Color.toString());
-    //int indexG = currentPlayer.getFieldIndex();
-    //String x = Integer.toString(indexG);
-    //log.warn(x);
+    log.warn("Unsere Farbe ist:" + Color.toString());
 
     //Test ob zu viele Karrotten vorhanden sind
     boolean tomuchCarrots;
@@ -82,9 +82,29 @@ public class RandomLogic implements IGameHandler {
     }else {
         tomuchCarrots = false;
     }
+    log.info(String.valueOf(tomuchCarrots));
 
-    String tomuchCarrot = String.valueOf(tomuchCarrots);
-    log.info(tomuchCarrot);
+    // Test ob wir erster Sind
+    Player Me;
+    String red = "RED";
+    if (red == Color.toString()){
+        Me = gameState.getRedPlayer();
+    }else{
+        Me = gameState.getBluePlayer();
+    }
+    boolean first = gameState.isFirst(Me);
+    log.info("Sind wir erster?" + String.valueOf(first));
+
+    int IndexGegner;
+    for(int i=0; i<64; i++)
+    {
+       boolean Occupied = gameState.isOccupied(i);
+       if (Occupied && feld != i){
+           IndexGegner = i;
+           log.info("Index der Gegners ist: " + String.valueOf(IndexGegner));
+       }
+    }
+
 
     ArrayList<Move> possibleMove = gameState.getPossibleMoves(); // Enthält mindestens ein Element
     ArrayList<Move> saladMoves = new ArrayList<>();
@@ -114,7 +134,7 @@ public class RandomLogic implements IGameHandler {
                 } else if (gameState.getBoard().getTypeAt(advance.getDistance() + index) == FieldType.POSITION_1) {
                     //Zug auf 1er Feld
                     einserMoves.add(move);
-                    log.info("einser zug möglich");
+                    log.info("einser zug möglich und wir sind erster");
                 } else {
                     // Ziehe Vorwärts, wenn möglich
                     selectedMoves.add(move);
