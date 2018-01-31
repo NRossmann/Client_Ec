@@ -1,2 +1,2 @@
-# Client_Ec_SoftwareChallenge
-This is an Client for the Software Challenge http://www.software-challenge.de/
+# Client_Ec
+Dies ist der Client der Klasse Ec des Wolfgang-Borchert-Gymnasium
