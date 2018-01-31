@@ -160,6 +160,9 @@ public class RandomLogic implements IGameHandler {
         log.info("Sende Zug auf Salatfeld");
         move = saladMoves.get(rand.nextInt(saladMoves.size()));
 
+    }else if (tomuchCarrots && !carrotMoves.isEmpty()){
+        log.info("Sende Zug zum Karrottenfeld");
+        move = carrotMoves.get(rand.nextInt(carrotMoves.size()));
     }else if (!saladcardMoves.isEmpty()){
         //Salat durch Karte abgeben
         log.info("Sende Zug auf Hasenfeld mit Salatkarte");
@@ -167,13 +170,15 @@ public class RandomLogic implements IGameHandler {
     }else if (index > 56 && !fallbackSaladMoves.isEmpty()) {
         log.info("Sende Zug zurück hinter Salatfeld");
         move = fallbackSaladMoves.get(rand.nextInt(fallbackSaladMoves.size()));
-    }else if (tomuchCarrots && !carrotMoves.isEmpty()){
-        log.info("Sende Zug zum Karrottenfeld");
-        move = carrotMoves.get(rand.nextInt(carrotMoves.size()));
-    } else if (!selectedMoves.isEmpty()) {
+    }else if (!einserMoves.isEmpty()){
+        move = einserMoves.get(rand.nextInt(einserMoves.size()));
+        log.info("Sende zug auf einser Feld");
+    }else if (!selectedMoves.isEmpty()) {
         move = selectedMoves.get(rand.nextInt(selectedMoves.size()));
+        log.info("Sende selected Move");
     }else {
         move = possibleMove.get(rand.nextInt(possibleMove.size()));
+        log.info("Sende einen möglichen Zug");
     }
 
     move.orderActions();

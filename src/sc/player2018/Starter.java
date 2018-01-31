@@ -40,7 +40,7 @@ public class Starter extends AbstractClient {
 		} catch (IllegalArgumentException e) {
 			logic = LogicFactory.DEFAULT.getInstance(this);
 		}
-
+        //test
 		setHandler(logic);
 
 		// einem spiel beitreten
