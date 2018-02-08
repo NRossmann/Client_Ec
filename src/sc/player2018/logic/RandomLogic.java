@@ -31,7 +31,6 @@ public class RandomLogic implements IGameHandler {
 	private GameState gameState;
 	private Player currentPlayer;
 
-
   private static final Logger log = LoggerFactory.getLogger(RandomLogic.class);
 	/*
 	 * Klassenweit verfuegbarer Zufallsgenerator der beim Laden der klasse
@@ -69,13 +68,25 @@ public class RandomLogic implements IGameHandler {
 
     //Unsere Farbe
     PlayerColor Color = currentPlayer.getPlayerColor();
-    log.warn("Unsere Farbe ist:" + Color.toString());
+    log.info("Unsere Farbe ist:" + Color.toString());
+
+    //Farbe des Gegners
+    PlayerColor Opponentcolor = gameState.getOtherPlayerColor();
+    Player Opponent = gameState.getOpponent(currentPlayer);
+
+    //Index des Gegners
+    int IndexG = Opponent.getFieldIndex();
+    log.info("Der Index des Gegners ist: " + String.valueOf(IndexG));
+
+    //Karroten des Gegners
+    int carrotsOpponent = Opponent.getCarrots();
+    log.info("Der Gegener hat " + String.valueOf(carrotsOpponent) +  " Karrotten");
 
     //Test ob zu viele Karrotten vorhanden sind
     boolean tomuchCarrots;
     int feld = currentPlayer.getFieldIndex();
     int disgoal = 63-feld;
-    int carrotstogoal = GameRuleLogic.calculateCarrots(disgoal);
+    int carrotstogoal = GameRuleLogic.calculateCarrots(disgoal) + 5;
     int carrots = currentPlayer.getCarrots();
     if (carrots>=carrotstogoal){
         tomuchCarrots = true;
@@ -87,7 +98,7 @@ public class RandomLogic implements IGameHandler {
     // Test ob wir erster Sind
     Player Me;
     String red = "RED";
-    if (red == Color.toString()){
+    if (red.equals(Color.toString())){
         Me = gameState.getRedPlayer();
     }else{
         Me = gameState.getBluePlayer();
@@ -95,15 +106,6 @@ public class RandomLogic implements IGameHandler {
     boolean first = gameState.isFirst(Me);
     log.info("Sind wir erster?" + String.valueOf(first));
 
-    int IndexGegner;
-    for(int i=0; i<64; i++)
-    {
-       boolean Occupied = gameState.isOccupied(i);
-       if (Occupied && feld != i){
-           IndexGegner = i;
-           log.info("Index der Gegners ist: " + String.valueOf(IndexGegner));
-       }
-    }
 
 
     ArrayList<Move> possibleMove = gameState.getPossibleMoves(); // Enthält mindestens ein Element
@@ -114,6 +116,7 @@ public class RandomLogic implements IGameHandler {
     ArrayList<Move> selectedMoves = new ArrayList<>();
     ArrayList<Move> einserMoves = new ArrayList<>();
     ArrayList<Move> fallbackSaladMoves = new ArrayList<>();
+    ArrayList<Move> addcarrotMoves = new ArrayList<>();
 
     int index = currentPlayer.getFieldIndex();
     for (Move move : possibleMove)
@@ -131,10 +134,14 @@ public class RandomLogic implements IGameHandler {
                     // Zug auf Karrottenfeld
                     carrotMoves.add(move);
                     log.info("Karrotten Zug Möglich");
-                } else if (gameState.getBoard().getTypeAt(advance.getDistance() + index) == FieldType.POSITION_1) {
-                    //Zug auf 1er Feld
-                    einserMoves.add(move);
+                } else if (gameState.getBoard().getTypeAt(advance.getDistance() + index) == FieldType.POSITION_1 && first && !tomuchCarrots) {
+                    //Zug auf 1er Feld als Karrotten quelle
+                    addcarrotMoves.add(move);
                     log.info("einser zug möglich und wir sind erster");
+                }else if (gameState.getBoard().getTypeAt(advance.getDistance() + index) == FieldType.POSITION_2 && !first && !tomuchCarrots) {
+                    //Zug auf 2er Feld als Karrotten quelle
+                    addcarrotMoves.add(move);
+                    log.info("2er Zug möglich");
                 } else {
                     // Ziehe Vorwärts, wenn möglich
                     selectedMoves.add(move);
@@ -149,7 +156,7 @@ public class RandomLogic implements IGameHandler {
                 ExchangeCarrots exchangeCarrots = (ExchangeCarrots) action;
                 if (exchangeCarrots.getValue() == 10 && !tomuchCarrots) {
                     // Nehme nur Karotten auf wenn nicht zu viele Karotten da sind
-                    selectedMoves.add(move);
+                    addcarrotMoves.add(move);
                 } else if (exchangeCarrots.getValue() == -10 && tomuchCarrots) {
                     // abgeben von Karotten nur wenn zu viele
                     carrotMoves.add(move);
@@ -171,7 +178,6 @@ public class RandomLogic implements IGameHandler {
 
 
     Move move;
-    int Field = currentPlayer.getFieldIndex();
     if (!winningMoves.isEmpty()) {
       log.info("Sende Gewinnzug");
       move = winningMoves.get(rand.nextInt(winningMoves.size()));
@@ -180,6 +186,9 @@ public class RandomLogic implements IGameHandler {
         log.info("Sende Zug auf Salatfeld");
         move = saladMoves.get(rand.nextInt(saladMoves.size()));
 
+    }else if (!tomuchCarrots && !addcarrotMoves.isEmpty()) {
+        log.info("Nehme Karrotten auf");
+        move = addcarrotMoves.get(rand.nextInt(addcarrotMoves.size()));
     }else if (tomuchCarrots && !carrotMoves.isEmpty()){
         log.info("Sende Zug zum Karrottenfeld");
         move = carrotMoves.get(rand.nextInt(carrotMoves.size()));
