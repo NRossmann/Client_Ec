@@ -19,6 +19,7 @@ import sc.shared.GameResult;
 import sc.shared.PlayerScore;
 import sc.plugin2018.Board;
 import sc.plugin2018.GameState;
+import sc.plugin2018.Card;
 
 /**
  * Das Herz des Simpleclients: Eine sehr simple Logik, die ihre Zuege zufaellig
@@ -30,6 +31,8 @@ public class RandomLogic implements IGameHandler {
 	private Starter client;
 	private GameState gameState;
 	private Player currentPlayer;
+	boolean fallback = false;
+	int fallbackturn = 0;
 
   private static final Logger log = LoggerFactory.getLogger(RandomLogic.class);
 	/*
@@ -66,11 +69,15 @@ public class RandomLogic implements IGameHandler {
     long startTime = System.nanoTime();
     log.info("Es wurde ein Zug angefordert.");
 
+    //turn und index als int
+    int turn = gameState.getTurn();
+    int index = currentPlayer.getFieldIndex();
+
     //Unsere Farbe
     PlayerColor Color = currentPlayer.getPlayerColor();
     log.info("Unsere Farbe ist:" + Color.toString());
 
-    //Farbe des Gegners
+    //Farbe des Gegner
     PlayerColor Opponentcolor = gameState.getOtherPlayerColor();
 
     //Player clone des Gegners Initialisieren
@@ -92,7 +99,7 @@ public class RandomLogic implements IGameHandler {
     boolean tomuchCarrots;
     int feld = currentPlayer.getFieldIndex();
     int disgoal = 63-feld;
-    int carrotstogoal = GameRuleLogic.calculateCarrots(disgoal) + 5;
+    int carrotstogoal = GameRuleLogic.calculateCarrots(disgoal);
     int carrots = currentPlayer.getCarrots();
     if (carrots>=carrotstogoal){
         tomuchCarrots = true;
@@ -101,12 +108,27 @@ public class RandomLogic implements IGameHandler {
     }
     log.info(String.valueOf(tomuchCarrots));
 
-    // Test ob wir erster Sind
-    Player Me = currentPlayer.clone();
-    boolean first = gameState.isFirst(Me);
+    //Fallback Karotten begrenzung
+    boolean tomuchCarrotsF;
+    int carrotstogoalF = GameRuleLogic.calculateCarrots(disgoal) - 5;
+    int carrotsF = currentPlayer.getCarrots();
+    if (carrotsF>=carrotstogoalF){
+        tomuchCarrotsF = true;
+    }else {
+        tomuchCarrotsF = false;
+    }
+
+
+    //Nicht zu oft zurück springen
+    if(fallback && turn-fallbackturn>=5){
+        fallback=false;
+    }
+
+
+
+   // Test ob wir erster Sind
+    boolean first = gameState.isFirst(currentPlayer.clone());
     log.info("Sind wir erster?" + String.valueOf(first));
-
-
 
     ArrayList<Move> possibleMove = gameState.getPossibleMoves(); // Enthält mindestens ein Element
     ArrayList<Move> saladMoves = new ArrayList<>();
@@ -116,8 +138,11 @@ public class RandomLogic implements IGameHandler {
     ArrayList<Move> selectedMoves = new ArrayList<>();
     ArrayList<Move> fallbackSaladMoves = new ArrayList<>();
     ArrayList<Move> addcarrotMoves = new ArrayList<>();
+    ArrayList<Move> fallbackMoves = new ArrayList<>();
+    ArrayList<Move> trashMoves = new ArrayList<>();
+    ArrayList<Move> lastMoves = new ArrayList<>();
 
-    int index = currentPlayer.getFieldIndex();
+
     for (Move move : possibleMove)
         for (Action action : move.actions) {
             if (action instanceof Advance) {
@@ -126,21 +151,24 @@ public class RandomLogic implements IGameHandler {
                     // Zug ins Ziel
                     winningMoves.add(move);
 
-                } else if (gameState.getBoard().getTypeAt(advance.getDistance() + index) == FieldType.SALAD) {
+                }else if (gameState.getBoard().getTypeAt(advance.getDistance() + index) == FieldType.SALAD) {
                     // Zug auf Salatfeld
                     saladMoves.add(move);
                 } else if (gameState.getBoard().getTypeAt(advance.getDistance() + index) == FieldType.CARROT) {
                     // Zug auf Karrottenfeld
                     carrotMoves.add(move);
-                    log.info("Karrotten Zug Möglich");
-                } else if (gameState.getBoard().getTypeAt(advance.getDistance() + index) == FieldType.POSITION_1 && first && !tomuchCarrots) {
+                    log.info("Karotten Zug Möglich");
+                } else if (gameState.getBoard().getTypeAt(advance.getDistance() + index) == FieldType.POSITION_1 && advance.getDistance() + index > IndexG && !tomuchCarrots) {
                     //Zug auf 1er Feld als Karrotten quelle
                     addcarrotMoves.add(move);
                     log.info("einser zug möglich und wir sind erster");
-                }else if (gameState.getBoard().getTypeAt(advance.getDistance() + index) == FieldType.POSITION_2 && !first && !tomuchCarrots) {
+                }else if (gameState.getBoard().getTypeAt(advance.getDistance() + index) == FieldType.POSITION_2 && advance.getDistance() + index < IndexG && !tomuchCarrots) {
                     //Zug auf 2er Feld als Karrotten quelle
                     addcarrotMoves.add(move);
                     log.info("2er Zug möglich");
+                }else if (turn >= 59 && advance.getDistance() + index > IndexG){
+                    //Letzter weiter Zug
+                    lastMoves.add(move);
                 } else {
                     // Ziehe Vorwärts, wenn möglich
                     selectedMoves.add(move);
@@ -148,10 +176,12 @@ public class RandomLogic implements IGameHandler {
             } else if (action instanceof Card) {
                 Card card = (Card) action;
                 if (card.getType() == CardType.EAT_SALAD) {
-                    // Zug auf Hasenfeld und danch Salatkarte
+                    //Salatkarte
                     saladcardMoves.add(move);
-                } // Muss nicht zusätzlich ausgewählt werden, wurde schon durch Advance ausgewählt
-            } else if (action instanceof ExchangeCarrots) {
+                }else if (card.getType() == CardType.FALL_BACK){
+                    trashMoves.add(move);
+                }
+            }else if (action instanceof ExchangeCarrots) {
                 ExchangeCarrots exchangeCarrots = (ExchangeCarrots) action;
                 if (exchangeCarrots.getValue() == 10 && !tomuchCarrots) {
                     // Nehme nur Karotten auf wenn nicht zu viele Karotten da sind
@@ -165,9 +195,13 @@ public class RandomLogic implements IGameHandler {
                     // Falle nur am Ende (index > 56) zurück, außer du musst noch einen Salat loswerden
                     log.debug("fallback zug möglich");
                     fallbackSaladMoves.add(move);
-                } else if (index <= 56 && index - gameState.getPreviousFieldByType(FieldType.HEDGEHOG, index) < 5 && !tomuchCarrots) {
+                } else if (index <= 56 && index - gameState.getPreviousFieldByType(FieldType.HEDGEHOG, index) < 5 && !tomuchCarrotsF) {
                     // Falle zurück, falls sich Rückzug lohnt (nicht zu viele Karotten aufnehmen)
-                    selectedMoves.add(move);
+                    fallback=true;
+                    fallbackturn=turn;
+                    fallbackMoves.add(move);
+                }else if (true){
+                    trashMoves.add(move);
                 }
             }else {
                 // Füge Salatessen oder Skip hinzu
@@ -175,28 +209,34 @@ public class RandomLogic implements IGameHandler {
             }
         }
 
-
+    int salads = currentPlayer.getSalads();
     Move move;
     if (!winningMoves.isEmpty()) {
       log.info("Sende Gewinnzug");
       move = winningMoves.get(rand.nextInt(winningMoves.size()));
-    } else if (!saladMoves.isEmpty()) {
+    }else if(turn >= 59 && !lastMoves.isEmpty()){
+        log.info("Sende einen Letzten Langen Zug");
+        move = lastMoves.get(rand.nextInt(lastMoves.size()));
+    }else if (index > 56 && !fallbackSaladMoves.isEmpty()) {
+        log.info("Sende Zug zurück hinter Salatfeld");
+        move = fallbackSaladMoves.get(rand.nextInt(fallbackSaladMoves.size()));
+    }else if (!saladMoves.isEmpty()) {
         // es gibt die Möglichkeit ein Salatfeld zu begehen
         log.info("Sende Zug auf Salatfeld");
         move = saladMoves.get(rand.nextInt(saladMoves.size()));
-    }else if (!tomuchCarrots && !addcarrotMoves.isEmpty()) {
-        log.info("Nehme Karrotten auf");
-        move = addcarrotMoves.get(rand.nextInt(addcarrotMoves.size()));
     }else if (tomuchCarrots && !carrotMoves.isEmpty()){
-        log.info("Gebe Karrotten ab");
+        log.info("Gebe Karotten ab");
         move = carrotMoves.get(rand.nextInt(carrotMoves.size()));
+    }else if (!tomuchCarrots && !addcarrotMoves.isEmpty()) {
+        log.info("Nehme Karotten auf");
+        move = addcarrotMoves.get(rand.nextInt(addcarrotMoves.size()));
+    }else if (!tomuchCarrots && !fallbackMoves.isEmpty()){
+        log.info("Sende Zug zurück");
+        move = fallbackMoves.get(rand.nextInt(fallbackMoves.size()));
     }else if (!saladcardMoves.isEmpty()){
         //Salat durch Karte abgeben
         log.info("Sende Zug auf Hasenfeld mit Salatkarte");
         move = saladcardMoves.get(rand.nextInt(saladcardMoves.size()));
-    }else if (index > 56 && !fallbackSaladMoves.isEmpty()) {
-        log.info("Sende Zug zurück hinter Salatfeld");
-        move = fallbackSaladMoves.get(rand.nextInt(fallbackSaladMoves.size()));
     }else if (!selectedMoves.isEmpty()) {
         move = selectedMoves.get(rand.nextInt(selectedMoves.size()));
         log.info("Sende selected Move");
@@ -204,7 +244,6 @@ public class RandomLogic implements IGameHandler {
         move = possibleMove.get(rand.nextInt(possibleMove.size()));
         log.info("Sende einen möglichen Zug");
     }
-
     move.orderActions();
     log.info("Sende zug {}", move);
     long nowTime = System.nanoTime();
@@ -242,5 +281,4 @@ public class RandomLogic implements IGameHandler {
 	public void sendAction(Move move) {
 		client.sendMove(move);
 	}
-
 }
